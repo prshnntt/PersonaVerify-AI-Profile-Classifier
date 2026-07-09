@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PersonaVerify | ML Model Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Full-screen Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p id="loadingText">Processing model inference...</p>
+    </div>
+
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h2>PersonaVerify</h2>
+                <span class="version">v1.2 (Random Forest)</span>
+            </div>
+            <nav class="side-nav">
+                <a href="#" class="nav-view-btn active" data-target="view-predictor">Model Predictor</a>
+                <a href="#" class="nav-view-btn" data-target="view-batch">Batch Analysis (CSV)</a>
+                <a href="#" class="nav-view-btn" data-target="view-metrics">Model Metrics Dashboard</a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button type="button" class="btn-outline btn-block" id="btnFillFake">Load Test Data (Fake)</button>
+                <button type="button" class="btn-outline btn-block" id="btnFillReal" style="margin-top: 8px;">Load Test Data (Real)</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>Profile Authenticity Predictor</h1>
+                <div class="status-indicator">
+                    <span class="dot"></span> API Connected
+                </div>
+            </header>
+
+            <div class="workspace-area">
+                <!-- VIEW 1: Model Predictor (Default) -->
+                <div id="view-predictor" class="workspace view-section active">
+                    <!-- Input Column -->
+                    <div class="panel input-panel">
+                    <div class="panel-header">
+                        <h3>Input Features</h3>
+                    </div>
+                    <form id="mlForm" class="panel-body">
+                        
+                        <div class="fieldset">
+                            <label class="section-label">Account Metadata</label>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Profile Picture</label>
+                                    <select name="profile_pic" id="profile_pic">
+                                        <option value="1">Present (1)</option>
+                                        <option value="0">Missing (0)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Account Privacy</label>
+                                    <select name="private" id="private">
+                                        <option value="0">Public (0)</option>
+                                        <option value="1">Private (1)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>External URL</label>
+                                    <select name="external_url" id="external_url">
+                                        <option value="0">None (0)</option>
+                                        <option value="1">Present (1)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="fieldset">
+                            <label class="section-label">Text & Syntax Metrics</label>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Username Num Ratio</label>
+                                    <input type="number" step="0.01" name="nums_length_username" id="nums_length_username" value="0.10">
+                                </div>
+                                <div class="form-group">
+                                    <label>Name = Username</label>
+                                    <select name="name_eq_username" id="name_eq_username">
+                                        <option value="0">False (0)</option>
+                                        <option value="1">True (1)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Full Name Word Count</label>
+                                    <input type="number" name="fullname_words" id="fullname_words" value="2">
+                                </div>
+                                <div class="form-group">
+                                    <label>Full Name Num Ratio</label>
+                                    <input type="number" step="0.01" name="nums_length_fullname" id="nums_length_fullname" value="0.00">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Bio Character Length</label>
+                                    <input type="number" name="description_length" id="description_length" value="45">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="fieldset">
+                            <label class="section-label">Engagement Network</label>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Total Posts</label>
+                                    <input type="number" name="posts" id="posts" value="30">
+                                </div>
+                                <div class="form-group">
+                                    <label>Follower Count</label>
+                                    <input type="number" name="followers" id="followers" value="500">
+                                </div>
+                                <div class="form-group">
+                                    <label>Following Count</label>
+                                    <input type="number" name="follows" id="follows" value="300">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-footer">
+                            <button type="submit" id="submitBtn" class="btn-primary">Run Prediction</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Results Column -->
+                <div class="panel results-panel">
+                    
+                    <!-- Pre-run state -->
+                    <div id="resultsEmpty" class="results-empty">
+                        <div class="empty-icon">📊</div>
+                        <p>Waiting for data...</p>
+                        <span class="sub">Run prediction to view outputs and explainability reports.</span>
+                    </div>
+
+                    <!-- Post-run state -->
+                    <div id="resultsContent" class="results-layout" style="display: none;">
+                        
+                        <!-- Tabs -->
+                        <div class="tabs">
+                            <button class="tab-btn active" data-target="tab-overview">Overview</button>
+                            <button class="tab-btn xai-tab" data-target="tab-xai">Explainability (XAI)</button>
+                        </div>
+
+                        <!-- Tab 1: Overview -->
+                        <div id="tab-overview" class="tab-pane active">
+                            <div class="verdict-banner" id="verdictBanner">
+                                <h2 id="predictionText">Real Profile</h2>
+                                <div class="conf-box">
+                                    <span>Confidence Score</span>
+                                    <strong id="confidenceText">99.5%</strong>
+                                </div>
+                            </div>
+
+                            <div class="info-block">
+                                <h4>Detected Risk Rules</h4>
+                                <ul class="rule-list" id="ruleList">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
+                            
+                            <div class="info-block">
+                                <h4>Model Details</h4>
+                                <table class="technical-table">
+                                    <tr>
+                                        <td>Classifier</td>
+                                        <td>RandomForestClassifier</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Estimators (Trees)</td>
+                                        <td>100</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Explainability Method</td>
+                                        <td>Decision Tree Path Decomposition</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Explainable AI Deep Dive -->
+                        <div id="tab-xai" class="tab-pane">
+                            <div class="xai-header">
+                                <h3>Local Feature Interpretability</h3>
+                                <p>This chart demonstrates how each feature shifted the model's base probability for this specific instance (Tree Path Decomposition).</p>
+                            </div>
+
+                            <div class="xai-legend">
+                                <span class="legend-item"><span class="box color-fake"></span> Pushes toward Fake</span>
+                                <span class="legend-item"><span class="box color-real"></span> Pushes toward Real</span>
+                            </div>
+
+                            <!-- Waterfall style container -->
+                            <div class="xai-chart-container" id="xaiChart">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                            
+                            <div class="xai-footer">
+                                <p><em>Note: Contributions are mapped to local log odds shifts and converted to probability impact. Top 8 most impactful features shown.</em></p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div> <!-- End Predictor View -->
+
+            <!-- VIEW 2: Batch Analysis (CSV) -->
+            <div id="view-batch" class="workspace view-section" style="display: none;">
+                <div class="panel" style="width: 100%;">
+                    <div class="panel-header">
+                        <h3>Bulk CSV Prediction</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="batch-upload-box">
+                            <form id="bulkForm">
+                                <label class="upload-label">
+                                    <span class="icon">📁</span>
+                                    <strong>Click to upload a CSV file</strong>
+                                    <input type="file" id="csvFile" name="file" accept=".csv" required style="display: none;">
+                                </label>
+                                <p class="file-name" id="fileNameDisplay">No file selected</p>
+                                <button type="submit" class="btn-primary" style="max-width: 200px; margin: 20px auto;">Run Bulk Analysis</button>
+                            </form>
+                        </div>
+
+                        <div id="bulkResults" style="display: none; margin-top: 30px;">
+                            <h4>Bulk Results Summary</h4>
+                            <div class="dashboard-cards" style="margin-bottom: 20px;">
+                                <div class="metric-card">
+                                    <div class="mc-title">Rows Processed</div>
+                                    <div class="mc-value" id="bulkTotal">0</div>
+                                </div>
+                                <div class="metric-card danger">
+                                    <div class="mc-title">Fake Profiles</div>
+                                    <div class="mc-value" id="bulkFake">0</div>
+                                </div>
+                                <div class="metric-card success">
+                                    <div class="mc-title">Real Profiles</div>
+                                    <div class="mc-value" id="bulkReal">0</div>
+                                </div>
+                            </div>
+                            
+                            <table class="technical-table" id="bulkTable">
+                                <thead>
+                                    <tr>
+                                        <th>Row #</th>
+                                        <th>Prediction</th>
+                                        <th>Confidence</th>
+                                        <th>Top Factors</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: Model Metrics Dashboard -->
+            <div id="view-metrics" class="workspace view-section" style="display: none;">
+                <div class="panel" style="width: 100%;">
+                    <div class="panel-header">
+                        <h3>Global Model Metrics</h3>
+                    </div>
+                    <div class="panel-body">
+                        <p style="margin-bottom: 24px; color: var(--text-muted);">This dashboard tracks all predictions executed by the Random Forest model across the API.</p>
+                        
+                        <div class="dashboard-cards">
+                            <div class="metric-card primary">
+                                <div class="mc-title">Total Predictions Made</div>
+                                <div class="mc-value" id="dashTotal">-</div>
+                            </div>
+                            <div class="metric-card danger">
+                                <div class="mc-title">Total Flagged Target (Fake)</div>
+                                <div class="mc-value" id="dashFake">-</div>
+                            </div>
+                            <div class="metric-card success">
+                                <div class="mc-title">Total Cleared (Real)</div>
+                                <div class="mc-value" id="dashReal">-</div>
+                            </div>
+                        </div>
+
+                        <div class="info-block" style="margin-top: 40px;">
+                            <h4>System Health</h4>
+                            <table class="technical-table">
+                                <tr>
+                                    <td>API Status</td>
+                                    <td><span style="color: var(--real-color); font-weight: bold;">Healthy</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Active Model</td>
+                                    <td>RandomForestClassifier</td>
+                                </tr>
+                                <tr>
+                                    <td>Database Connection</td>
+                                    <td>Active (SQLite)</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- End Workspace Area -->
+    </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
