@@ -352,10 +352,6 @@ The dashboard needs aggregate stats without re-running the model. Every `POST /a
 
 ## 👤 Author
 
-**Kush** — [@kushhcodes](https://github.com/kushhcodes)
+**Prashant**
 
 ---
-
-## 📄 License
-
-This project is open source under the [MIT License](LICENSE).# PersonaVerify-AI-Profile-Classifier
